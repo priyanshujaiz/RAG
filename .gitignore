@@ -1,0 +1,9 @@
+//DESIGN FILES
+Design/
+ref/
+docs/
+.env
+scripts/
+__pycache__/
+
+dev.db
