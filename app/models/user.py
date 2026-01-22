@@ -3,6 +3,7 @@ from sqlalchemy import Column, String, DateTime
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from app.core.database import Base
+from sqlalchemy.orm import relationship
 
 class User(Base):
     __tablename__="users"
@@ -13,4 +14,4 @@ class User(Base):
 
     created_at=Column(DateTime(timezone=True),server_default=func.now())
     
-
+    workspace_memberships = relationship("WorkspaceMembership", back_populates="user")
