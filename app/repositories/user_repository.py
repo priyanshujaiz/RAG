@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 from app.models.user import User
+from uuid import UUID
 
 class UserRepository:
     def get_by_email(self,db: Session, email:str)-> User | None:
@@ -12,7 +13,7 @@ class UserRepository:
         db.refresh(user)
         return user
 
-    def get_by_id(self, db: Session, user_id: str):
+    def get_by_id(self, db: Session, user_id: UUID):
         return db.query(User).filter(User.id == user_id).first()
 
 
