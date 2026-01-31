@@ -2,6 +2,9 @@ from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status
 from sqlalchemy.orm import Session
 from uuid import UUID
 from typing import List
+import hashlib
+from app.models.job import Job
+from app.repositories.job_repository import JobRepository
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_user, get_current_project
@@ -17,7 +20,7 @@ router = APIRouter(
 )
 
 # 1. UPLOAD DOCUMENT
-@router.post("", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", status_code=status.HTTP_201_CREATED)
 def upload_document(
     workspace_id: UUID,
     project_id: UUID,
@@ -27,32 +30,48 @@ def upload_document(
     db: Session = Depends(get_db)
 ):
     """
-    Uploads a text file, creates a document, creates v1, and chunks it.
+    Async Upload document and save file ,create metadata and create version.
     """
-    # 1. Read File Content (Memory-based for now)
     try:
-        content_bytes = file.file.read()
-        content_text = content_bytes.decode("utf-8")
-    except Exception:
-        raise HTTPException(status_code=400, detail="File must be valid UTF-8 text")
+        content_bytes=file.file.read()
+        content_hash=hashlib.sha256(content_bytes).hexdigest()
 
-    # 2. Save to Disk (Physical Storage)
-    # Strategy: storage_data/{project_id}/{filename}
-    storage = LocalDiskStorage()
-    file_path = f"documents/{project.id}/{file.filename}"
-    storage.save(file_path, content_bytes)
+        storage=LocalDiskStorage()
+        file_path=f"documents/{project.id}/{file.filename}"
+        storage.save(file_path, content_bytes)
 
-    # 3. Save to DB (Logical Storage)
-    service = DocumentService(db)
-    document = service.create_document(
-        project_id=project.id,
-        title=file.filename,
-        created_by=current_user.id,
-        file_path=file_path,
-        content=content_text
-    )
+        service=DocumentService(db)
+        document, version=service.create_document_metadata(
+            project_id=project.id,
+            title=file.filename,
+            created_by=current_user.id,
+            file_path=file_path,
+            content_hash=content_hash
+        )
 
-    return document
+        job_repo=JobRepository(db)
+        new_job=Job(
+            project_id=project.id,
+            job_type="DOCUMENT_INGEST",
+            target_type="DOCUMENT_VERSION",
+            target_id=version.id,
+            payload={
+                "file_name": file.filename,
+                "file_path": file_path
+            }
+        )
+        job_repo.create(new_job)
+
+        db.commit()
+        return {
+            "document_id": document.id,
+            "version_id": version.id,
+            "job_id": new_job.id,
+            "status": "PROCESSING"
+        }
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
 
 # 2. LIST DOCUMENTS
 @router.get("", response_model=List[DocumentResponse])

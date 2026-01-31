@@ -42,7 +42,7 @@ class JobRepository:
         self.db.refresh(job)
         return job
     
-    def mark_failed(self,job:Job)->Job:
+    def mark_failed(self,job:Job,error:Exception)->Job:
         job.attempts+=1
         job.last_error=str(error)
         if job.attempts>=job.max_attempts:

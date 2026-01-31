@@ -36,7 +36,7 @@ class Job(Base):
     target_type=Column(String, nullable=False)
     target_id=Column(UUID(as_uuid=True), nullable=False)
 
-    playload=Column(JSON, nullable=True)
+    payload=Column(JSON, nullable=True)
 
     attempts=Column(Integer, nullable=False, default=0)
     max_attempts=Column(Integer, nullable=False, default=3)
@@ -54,5 +54,6 @@ class Job(Base):
 
     # Relationships
     project=relationship("Project", back_populates="jobs")
+    ai_run=relationship("AIRun", back_populates="job")
 
 

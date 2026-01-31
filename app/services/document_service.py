@@ -14,15 +14,15 @@ class DocumentService:
         # Initialize all three repositories
         self.doc_repo = DocumentRepository(db)
         self.version_repo = DocumentVersionRepository(db)
-        self.chunk_repo = DocumentChunkRepository(db)
+        # self.chunk_repo = DocumentChunkRepository(db)
 
-    def create_document(
+    def create_document_metadata(
         self,
         project_id: UUID,
         title: str,
         created_by: UUID,
         file_path: str,
-        content: str
+        content_hash: str
     ) -> Document:
         """
         Creates a new logical document, its first version (v1), and splits content into chunks.
@@ -36,9 +36,6 @@ class DocumentService:
                 created_by=created_by
             )
             document = self.doc_repo.create(new_doc) # Adds to session, no commit yet
-
-            # 2. Create the First Version (v1)
-            content_hash = hashlib.sha256(content.encode('utf-8')).hexdigest()
             
             new_version = DocumentVersion(
                 document_id=document.id,
@@ -49,28 +46,11 @@ class DocumentService:
             )
             version = self.version_repo.create(new_version) # Adds to session
 
-            # 3. Create Chunks (Naive splitting for now)
-            # We split every 500 characters. Later, this will be smarter.
-            chunks = []
-            chunk_size = 500
-            for i, start in enumerate(range(0, len(content), chunk_size)):
-                text_segment = content[start : start + chunk_size]
-                chunks.append(
-                    DocumentChunk(
-                        document_version_id=version.id,
-                        chunk_index=i,
-                        text=text_segment
-                    )
-                )
-            
-            self.chunk_repo.bulk_create(chunks) # Adds all to session
-
-            # 4. Commit Everything
+            #commit metadata to db
             self.db.commit()
-            
-            # Refresh to get IDs and return
             self.db.refresh(document)
-            return document
+            self.db.refresh(version)
+            return document, version
 
         except Exception as e:
             self.db.rollback()

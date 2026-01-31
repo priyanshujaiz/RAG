@@ -43,3 +43,4 @@ class Project(Base):
     documents = relationship("Document", back_populates="project")
 
     jobs=relationship("Job", back_populates="project")
+    ai_runs=relationship("AIRun", back_populates="project")

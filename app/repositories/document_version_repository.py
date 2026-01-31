@@ -32,3 +32,5 @@ class DocumentVersionRepository:
             .order_by(DocumentVersion.version_number.asc())
             .all()
         )
+    def get_by_id(self, id: UUID) -> DocumentVersion | None:
+        return self.db.query(DocumentVersion).filter(DocumentVersion.id == id).first()

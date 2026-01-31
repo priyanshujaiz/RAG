@@ -11,3 +11,4 @@ dev.db
 run_sql.sql
 test.py
 .vscode/
+storage_data/

@@ -24,3 +24,14 @@ class DocumentChunkRepository:
             .order_by(DocumentChunk.chunk_index.asc())
             .all()
         )
+
+    def hash_chunks(self, version_id: UUID) ->bool:
+        """
+        Idempotency check to ensure chunks are not re-hashed.
+        """
+        return (
+            self.db.query(DocumentChunk)
+            .filter(DocumentChunk.document_version_id == version_id)
+            .limit(1)
+            .count()>0
+        )
